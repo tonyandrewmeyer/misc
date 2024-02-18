@@ -1,6 +1,6 @@
 # Handling Temporary Errors in Charms
 
-There are a few types of errors that can occur while a Charm is handling an event that are expected to resolve within a fairly short timeframe without human intervention, and can occur at any point during the event handling, despite Juju's efforts to provide a stable snapshot of the model state.
+There are a few types of errors that can occur while a charm is handling an event that are expected to resolve within a fairly short timeframe without human intervention, and can occur at any point during the event handling, despite Juju's efforts to provide a stable snapshot of the model state.
 
 Common examples are an issue communicating with Pebble, or communicating directly with Kubernetes (with [LightKube](https://lightkube.readthedocs.io/en/latest/) for example), or more generally working with any workload or external API.
 
