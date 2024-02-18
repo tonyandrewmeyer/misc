@@ -36,7 +36,7 @@ else:
     return
 ```
 
-However, it's clear now that the `can_connect()` call isn't doing anything useful - it's pinging Pebble but most of the time we expect Pebble will be available (so it's not required) and when it's not we already have the code to handle that. Let's simplify the code:
+However, it's clear now that the `can_connect()` call isn't doing anything useful - it's pinging Pebble but most of the time we expect Pebble will be available (so it's not required) and when it's not we already have the `try`/`except` to handle that. Let's make an attempt to simplify the code:
 
 ```python
 try:
