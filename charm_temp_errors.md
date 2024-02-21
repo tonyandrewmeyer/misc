@@ -25,9 +25,7 @@ If Pebble can't be reached, then this will raise a `ConnectionError` and the cha
 
 A common pattern is to check Pebble first, and defer if it's not available:
 
-[warn]
-> :warning: Don't use this code - there's a better alternative below!
-[/warn]
+> :warning: **Don't use this code** - there's a better alternative below!
 
 ```python
 if not container.can_connect():
@@ -38,9 +36,7 @@ container.replan()
 
 A problem with this approach is that `can_connect()` doesn't guarantee that Pebble will be reachable the next time the charm tries to communicate with it - just that it was at that point in time. This means that we've introduced a race condition where the `can_connect()` can succeed but the `replan()` fails, and we again end up in an error state. Let's try to fix that:
 
-[warn]
-> :warning: Don't use this code - there's a better alternative below!
-[/warn]
+> :warning: **Don't use this code** - there's a better alternative below!
 
 ```python
 if not container.can_connect():
