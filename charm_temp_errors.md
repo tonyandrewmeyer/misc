@@ -67,10 +67,9 @@ We're pretty sure that when we do get this failure, it's a temporary problem - p
 for attempt in range(MAX_PEBBLE_RETRIES):
     try:
         container.replan()
+        break
     except ops.pebble.ConnectionError:
         time.sleep(PEBBLE_RETRY_DELAY * attempt)
-    else:
-        break 
 else:
     event.defer()
     return
