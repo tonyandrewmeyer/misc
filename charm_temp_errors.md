@@ -95,7 +95,7 @@ Let's put this together into a simple, reusable, method with some example use:
 
 ```python
 def retry_pebble(func):
-    @functools.wrap
+    @functools.wraps
     def wrapped(*args, **kwargs)
         attempt = 0
         while True:
