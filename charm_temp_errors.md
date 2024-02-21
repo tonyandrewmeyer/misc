@@ -95,14 +95,14 @@ Let's put this together into a simple, reusable, method with some example use:
 
 ```python
 def retry_pebble(func):
-    @functools.wraps
-    def wrapped(*args, **kwargs)
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
         attempt = 0
         while True:
             attempt += 1
-            logger.debug("Attempt %d at calling %s.", attempt, func.name)
+            logger.debug("Attempt %d at calling %s.", attempt, func.__name__)
             try:
-                return func(*args, **kwargs) 
+                return func(*args, **kwargs)
             except ops.pebble.ConnectionError:
                 if attempt >= MAX_PEBBLE_RETRIES:
                     raise
@@ -140,6 +140,13 @@ def _on_leader_changed(self, event):
         self.containers[CONTAINER_NAME].replan()
     except ops.pebble.ConnectionError:
         raise RuntimeError("Pebble appears to be down - please investigate!")
+
+def _on_replan_action(self, event):
+    try:
+        self.containers[CONTAINER_NAME].replan()
+    except ops.pebble.ConnectionError:
+        event.fail("Unable to connect to Pebble.")
+        return
 
 def _on_collect_status(self, event):
     if not self.containers[CONTAINER_NAME].can_connect():
