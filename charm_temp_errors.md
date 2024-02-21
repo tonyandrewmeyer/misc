@@ -2,7 +2,7 @@
 
 There are a few types of errors that can occur while a charm is handling an event that are expected to resolve within a fairly short timeframe without human intervention, and can occur at any point during the event handling, despite Juju's efforts to provide a stable snapshot of the model state.
 
-Common examples are an issue communicating with Pebble, or communicating directly with Kubernetes (with [LightKube](https://lightkube.readthedocs.io/en/latest/) for example), or more generally working with any workload or external API, such as:
+Common examples are an issue communicating with Pebble, or communicating directly with Kubernetes (with [LightKube](https://lightkube.readthedocs.io/en/latest/) for example), or more generally working with any workload or external API. A typical example is:
 
 ```python
 def _service_is_running(self):
@@ -25,8 +25,9 @@ If Pebble can't be reached, then this will raise a `ConnectionError` and the cha
 
 A common pattern is to check Pebble first, and defer if it's not available:
 
-> [!WARNING] ** :warning: **
-> Don't use this code - there's a better alternative below!
+[warn]
+> :warning: Don't use this code - there's a better alternative below!
+[/warn]
 
 ```python
 if not container.can_connect():
@@ -37,8 +38,9 @@ container.replan()
 
 A problem with this approach is that `can_connect()` doesn't guarantee that Pebble will be reachable the next time the charm tries to communicate with it - just that it was at that point in time. This means that we've introduced a race condition where the `can_connect()` can succeed but the `replan()` fails, and we again end up in an error state. Let's try to fix that:
 
-> [!WARNING] ** :warning: **
-> Don't use this code - there's a better alternative below!
+[warn]
+> :warning: Don't use this code - there's a better alternative below!
+[/warn]
 
 ```python
 if not container.can_connect():
