@@ -81,10 +81,9 @@ At this point, if Pebble is responding, then we'll get our `replan()` executed i
 for attempt in range(MAX_PEBBLE_RETRIES):
     try:
         container.replan()
+        break
     except ops.pebble.ConnectionError:
         time.sleep(PEBBLE_RETRY_DELAY * attempt)
-    else:
-        break 
 else:
     raise RuntimeError("Unable to reach Pebble")
 ```
