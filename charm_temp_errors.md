@@ -2,9 +2,20 @@
 
 There are a few types of errors that can occur while a charm is handling an event that are expected to resolve within a fairly short timeframe without human intervention, and can occur at any point during the event handling, despite Juju's efforts to provide a stable snapshot of the model state.
 
-Common examples are an issue communicating with Pebble, or communicating directly with Kubernetes (with [LightKube](https://lightkube.readthedocs.io/en/latest/) for example), or more generally working with any workload or external API.
+Common examples are an issue communicating with Pebble, or communicating directly with Kubernetes (with [LightKube](https://lightkube.readthedocs.io/en/latest/) for example), or more generally working with any workload or external API, such as:
 
-Let's use Pebble as an example, where we want to do a simple replan of the workload:
+```python
+def _service_is_running(self):
+    if not self.container.can_connect():
+        return False
+    try:
+        service = self.container.get_service(self._service_name)
+    except (ops.ModelError, ops.pebble.ConnectionError):
+        return False
+    return service.is_running()
+``` 
+
+Let's take a dive into this pattern. We'll use Pebble as an example, where we want to do a simple replan of the workload:
 
 ```python
 container.replan()
@@ -13,6 +24,9 @@ container.replan()
 If Pebble can't be reached, then this will raise a `ConnectionError` and the charm will enter an error state. In some cases, that might be the right thing to do! However, we'd rather avoid the error state unless human intervention is required to fix the problem, and we're confident that in most cases this is actually just a temporary issue and trying again after a short time will solve the problem.
 
 A common pattern is to check Pebble first, and defer if it's not available:
+
+> [!WARNING]  
+> Don't use this code - there's a better alternative below!
 
 ```python
 if container.can_connect():
@@ -23,6 +37,9 @@ else:
 ```
 
 A problem with this approach is that `can_connect()` doesn't guarantee that Pebble will be reachable the next time the charm tries to communicate with it - just that it was at that point in time. This means that we've introduced a race condition where the `can_connect()` can succeed but the `replan()` fails, and we again end up in an error state. Let's try to fix that:
+
+> [!WARNING]  
+> Don't use this code - there's a better alternative below!
 
 ```python
 if container.can_connect():
@@ -53,7 +70,7 @@ for attempt in range(MAX_PEBBLE_RETRIES):
     try:
         container.replan()
     except ops.pebble.ConnectionError:
-        time.sleep(PEBBLE_RETRY_DELAY ** attempt)
+        time.sleep(PEBBLE_RETRY_DELAY * attempt)
     else:
         break 
 else:
@@ -70,45 +87,68 @@ for attempt in range(MAX_PEBBLE_RETRIES):
     try:
         container.replan()
     except ops.pebble.ConnectionError:
-        time.sleep(PEBBLE_RETRY_DELAY ** attempt)
+        time.sleep(PEBBLE_RETRY_DELAY * attempt)
     else:
         break 
 else:
-    logger.error("Unable to reach Pebble after %.1f seconds.", too_lazy_to_do_the_maths)
-    raise SystemExit(1)
+    raise RuntimeError("Unable to reach Pebble")
 ```
 
-The only time we aren't expecting Pebble to be available is before we get the container's `PebbleReadyEvent`. If our code is running in an event handler that's potentially before then (see [a charm's lifecycle](https://juju.is/docs/sdk/charm-lifecycle)), we'd want to have the work be handled by a later event (or defer). If the code is running in a handler than could occur in the "setup" as well as "operation" or "teardown" phases, then we might prefer to always avoid the error state.
+The only time we should expect Pebble to be unavailable is during the setup phase of [a charm's lifecycle](https://juju.is/docs/sdk/charm-lifecycle)). During this phase, we would generally expect another event to occur that would also trigger the work we're doing and so simply exiting (with success) is often the best choice.
 
-Let's put it all together into a simple, reusable, method:
+Let's put this together into a simple, reusable, method with some example use:
 
-.. TODO: I don't love how this is. A decorator or context manager is likely best. Maybe the handling of defer, return etc is too much? A class with a __getattr__ could make the call look much more like the normal version.
 
 ```python
-def tolerant_pebble(event, container, method, *args, **kwargs):
-    for attempt in range(MAX_PEBBLE_ATTEMPTS):
-        try:
-            getattr(container, method)(*args, **kwargs)
-        except ops.pebble.ConnectionError:
-            time.sleep(PEBBLE_RETRY_DELAY ** attempt)
-        else:
-            break
-    else:
-        if isinstance(event, ops.ActionEvent):
-            event.fail("Pebble is unreachable.")
-            raise SystemExit(0)
-        elif not hasattr(event, "defer"):
-            logger.error("Cannot connect to Pebble.")
-            raise SystemExit(1)  # Go into error state.
-        elif isinstance(event, (ops.StartEvent, ops.StorageAttachedEvent, ops.InstallEvent, ops.RelationCreatedEvent, ops.LeaderElectedEvent)):
-            logger.info("Unable to connect to Pebble.")
-            return  # Our charm knows that a later event will complete the work.
-        else: 
-            event.defer()
+def retry_pebble(func):
+    @functools.wrap
+    def wrapped(*args, **kwargs)
+        attempt = 0
+        while True:
+            attempt += 1
+            logger.debug("Attempt %d at calling %s.", attempt, func.name)
+            try:
+                return func(*args, **kwargs) 
+            except ops.pebble.ConnectionError:
+                if attempt >= MAX_PEBBLE_RETRIES:
+                    raise
+                time.sleep(PEBBLE_RETRY_DELAY * attempt)
+    return wrapped
+
+
+class MyCharm(ops.CharmBase):
+    def __init__(self, framework):
+        super().__init__(framework)
+        for container in self.containers:
+            container.replan = retry_pebble(container.replan)
+            # Also wrap the other container methods.
+        ...
 ```
 
-And use that for our `replan`:
+And use that for our `replan` in a few situations, as well as our friend `can_connect`:
 
 ```python
-tolerant_pebble(event, container, "replan")
+def _on_install(self, event):
+    try:
+        self.containers[CONTAINER_NAME].replan()
+    except ops.pebble.ConnectionError:
+        logger.info("Unable to connect to Pebble - setup will continue later.")
+
+def _on_pebble_ready(self, event):
+    try:
+        event.workload.replan()
+    except ops.pebble.ConnectionError:
+        logger.warning("Unable to connect to Pebble.")
+        event.defer()
+
+def _on_leader_changed(self, event):
+    try:
+        self.containers[CONTAINER_NAME].replan()
+    except ops.pebble.ConnectionError:
+        raise RuntimeError("Pebble appears to be down - please investigate!")
+
+def _on_collect_status(self, event):
+    if not self.containers[CONTAINER_NAME].can_connect():
+        event.set_status(ops.WaitingStatus("Waiting for Pebble."))
+    ...
 ```
