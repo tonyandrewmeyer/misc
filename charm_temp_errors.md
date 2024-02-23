@@ -83,9 +83,9 @@ for attempt in range(MAX_PEBBLE_RETRIES):
         container.replan()
         break
     except ops.pebble.ConnectionError:
+        if attempt >= MAX_PEBBLE_RETRIES - 1:
+            raise
         time.sleep(PEBBLE_RETRY_DELAY * attempt)
-else:
-    raise RuntimeError("Unable to reach Pebble")
 ```
 
 The only time we should expect Pebble to be unavailable is during the setup phase of [a charm's lifecycle](https://juju.is/docs/sdk/charm-lifecycle). During this phase, we would generally expect another event to occur that would also trigger the work we're doing and so simply exiting (with success) is often the best choice.
