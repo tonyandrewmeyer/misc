@@ -74,7 +74,7 @@ The available versions for a charm lib can be found on Charmhub in the "Librarie
 also be found using `charmcraft list-lib <charm name>`.
 
 The API and patch versions of a charm lib are contained within the lib source file itself. Search
-for `LIBAPI` (the API version) and `LIBPATCH` (the patch version) within the source`.
+for `LIBAPI` (the API version) and `LIBPATCH` (the patch version) within the source.
 
 It is not possible to see which version of a lib was used in a deployed charm, other than by using
 the `charm-version` to examine the source tree from which the charm was built or retrieving the
