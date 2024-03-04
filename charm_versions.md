@@ -66,7 +66,7 @@ revision each time a new version of the same charm is deployed or refreshed.
 
 ### Libraries
 
-Charm libs have both a "API version" and a "patch version". Any changes to the lib API that are not
+Charm libs have both an "API version" and a "patch version". Any changes to the lib API that are not
 backwards compatible will be made in a new API version, while new patch versions include compatible
 improvements including new features, general improvements, and bug fixes.
 
