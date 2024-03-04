@@ -32,6 +32,10 @@ To upgrade the version or revision of an installed charm,
 [use `juju refresh`](https://juju.is/docs/juju/manage-charms#heading--update-a-charm) for both
 local and Charmhub charms.
 
+The [jhack](https://github.com/canonical/jhack) tool has a `charm vinfo` command that will show
+the revision, channel, and workload version of a charm, as well as the versions of each charm
+lib (and if there is a more recent version available).
+
 ### Charm Version
 
 Charms can optionally specify a version of the charm itself. You can find this information with
