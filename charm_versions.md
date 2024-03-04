@@ -77,8 +77,9 @@ The API and patch versions of a charm lib are contained within the lib source fi
 for `LIBAPI` (the API version) and `LIBPATCH` (the patch version) within the source`.
 
 It is not possible to see which version of a lib was used in a deployed charm, other than by using
-the `charm-version` to examine the source tree from which the charm was built. In general, the lib
-version is a charm author concern, rather than one of an admin.
+the `charm-version` to examine the source tree from which the charm was built or retrieving the
+deployed charm source from a unit. In general, the lib version is a charm author concern, rather
+than one of an admin.
 
 Authors publish new versions of charm libraries using the
 [charmcraft publish-lib command](https://juju.is/docs/sdk/create-and-publish-a-charm-library#heading--update-a-charm-library),
